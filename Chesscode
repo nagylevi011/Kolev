@@ -1,0 +1,547 @@
+import pygame
+import chess
+
+# Pygame inicializálása
+pygame.init()
+
+# Képernyő beállítása
+screen_width = 640
+screen_height = 640
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Sakkfeladvány")
+
+# Színek és betűtípus
+white = (255, 255, 255)
+black = (0, 0, 0)
+grey = (128, 128, 86)
+light_square_color = (0, 191, 91)
+dark_square_color = (175, 8, 8)
+font = pygame.font.Font(None, 36)
+
+# Nehézségi gombok létrehozása
+easy_button = pygame.Rect(screen_width / 6 - 75, screen_height // 2 - 50, 150, 50)
+medium_button = pygame.Rect(screen_width // 2 - 75, screen_height // 2 - 50, 150, 50)
+hard_button = pygame.Rect(screen_width * 5 // 6 - 75, screen_height // 2 - 50, 150, 50)
+
+# Feladványtípus gombok létrehozása
+mate_in_1_button = pygame.Rect(screen_width / 6 - 75, screen_height * 3 // 4 - 50, 150, 50)
+mate_in_2_button = pygame.Rect(screen_width // 2 - 75, screen_height * 3 // 4 - 50, 150, 50)
+mate_in_3_button = pygame.Rect(screen_width * 5 // 6 - 75, screen_height * 3 // 4 - 50, 150, 50)
+
+# FEN kódok a sakkfeladványokhoz
+fen_codes =  {
+    "easy": "8/8/1Q6/8/8/5K2/8/5k2 w - - 0 1",  # Mate in 1 for easy
+    "medium": "6rk/P4ppr/7N/8/8/1Q6/8/3K4 w - - 0 1",  # Mate in 1 for medium
+    "hard": "1Bb3BN/R2Pk2r/1Q5B/4q2R/2bN4/4Q1BK/1p6/1bq1R1rb w - - 0 1",  # Mate in 1 for hard
+    "easy_2": "r1b2k1r/ppp1bppp/8/1B1Q4/5q2/2P5/PPP2PPP/R3R1K1 w - - 0 1",  # Mate in 2 for easy
+    "medium_2": "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 1 0",  # Mate in 2 for medium
+    "hard_2": "r2qkb1r/2p1nppp/p2p4/np1NN3/4P3/1BP5/PP1P1PPP/R1B1K2R w - - 1 0",  # Mate in 2 for hard
+    "easy_3": "k7/1p1rr1pp/pR1p1p2/Q1pq4/P7/8/2P3PP/1R4K1 w - - 1 0", # Mate in 3 for easy
+    "medium_3": "rnbk1b1r/ppqpnQ1p/4p1p1/2p1N1B1/4N3/8/PPP2PPP/R3KB1R w - - 1 0", # Mate in 2 for medium
+    "hard_3": "3r4/pR2N3/2pkb3/5p2/8/2B5/qP3PPP/4R1K1 w - - 1 0" # Mate in 3 for hard
+}
+# Bábuk képeinek betöltése
+def load_images():
+    images = {}
+    pieces = [
+        'white_king', 'white_queen', 'white_rook',
+        'white_bishop', 'white_knight', 'white_pawn',
+        'black_king', 'black_queen', 'black_rook',
+        'black_bishop', 'black_knight', 'black_pawn'
+    ]
+    for piece in pieces:
+        light_path = f'C:/Users/Nagy Róbert/Documents/teszt/{piece}_light.png'
+        dark_path = f'C:/Users/Nagy Róbert/Documents/teszt/{piece}_dark.png'
+        images[piece] = {
+            'light': pygame.image.load(light_path),
+            'dark': pygame.image.load(dark_path)
+        }
+    return images
+
+# Sakktábla létrehozása adott FEN kód alapján
+def create_board(fen):
+    return chess.Board(fen)
+
+# Sakktábla kirajzolása a Pygame képernyőn
+def display_board(board, images):
+    square_size = screen_width // 8
+
+    for square in chess.SQUARES:
+        row, col = divmod(square, 8)
+        x = col * square_size
+        y = (7 - row) * square_size
+        
+        is_dark_square = (row + col) % 2 != 0
+        color = dark_square_color if is_dark_square else light_square_color
+        pygame.draw.rect(screen, color, pygame.Rect(x, y, square_size, square_size))
+
+        # Bábuk kirajzolása a mezőn
+        piece = board.piece_at(square)
+        if piece:
+            piece_color = "white" if piece.color else "black"
+            piece_type = piece.piece_type
+            piece_names = {
+                chess.KING: "king",
+                chess.QUEEN: "queen",
+                chess.ROOK: "rook",
+                chess.BISHOP: "bishop",
+                chess.KNIGHT: "knight",
+                chess.PAWN: "pawn"
+            }
+            piece_name = f"{piece_color}_{piece_names[piece_type]}"
+            piece_image = images[piece_name]['dark'] if is_dark_square else images[piece_name]['light']
+            piece_image_resized = pygame.transform.scale(piece_image, (square_size, square_size))
+            screen.blit(piece_image_resized, (x, y))
+
+# Egy lépéses matt megkeresése
+def find_one_move_mate(board):
+    one_move_mates = []
+
+    # Iterálunk a fehér lehetséges lépésein
+    for white_move in board.legal_moves:
+        # Hajtsuk végre a fehér lépését
+        board.push(white_move)
+        
+        # Ellenőrizzük, hogy a lépés mattot ad-e
+        if board.is_checkmate():
+            # Ha mattot ad, hozzáadjuk a lépést a listához
+            one_move_mates.append(white_move)
+        
+        # Visszavonjuk a lépést
+        board.pop()
+        
+    # Ha találtunk egylépéses mattot, visszaadjuk a listát
+    if one_move_mates:
+        return one_move_mates
+    
+    # Ha nem találtunk mattot, visszaadunk None-t
+    print("Nem találtunk egy lépéses mattot.")
+    return None
+
+# Kétlépéses matt megkeresése
+def find_two_move_mate(board):
+    # Iterálunk a fehér lehetséges lépésein
+    for first_white_move in board.legal_moves:
+        # Hajtsuk végre a fehér lépését
+        board.push(first_white_move)
+        
+        # Feltételezzük, hogy minden fekete lépésre mattot kell adnunk
+        possible_mate = True
+        
+        # Ellenőrizzük a fekete lehetséges lépéseit
+        for black_move in board.legal_moves:
+            # Hajtsuk végre a fekete lépését
+            board.push(black_move)
+            
+            # Ellenőrizzük a fehér lehetséges második lépéseit
+            mate_found = False
+            for second_white_move in board.legal_moves:
+                # Hajtsuk végre a második fehér lépést
+                board.push(second_white_move)
+                
+                # Ellenőrizzük, hogy a második fehér lépés mattot ad-e
+                if board.is_checkmate():
+                    mate_found = True
+                
+                # Visszavonjuk a második fehér lépést
+                board.pop()
+                
+                # Ha mattot találtunk, ne folytassuk a keresést
+                if mate_found:
+                    break
+            
+            # Visszavonjuk a fekete lépést
+            board.pop()
+            
+            # Ha nem találtunk mattot a második fehér lépéssel, az első fehér lépés nem jó
+            if not mate_found:
+                possible_mate = False
+                break
+            
+        # Visszavonjuk az első fehér lépést
+        board.pop()
+        
+        # Ha minden fekete lépésre találtunk mattot a fehér második lépésével
+        if possible_mate:
+            # Az elvárt lépéseket listában tároljuk el és visszaadjuk
+            expected_moves = [first_white_move, black_move, second_white_move]
+            return expected_moves
+
+    # Ha nem találtunk olyan első fehér lépést, amely után a fekete minden lépése után mattot lehet adni
+    print("Nem találtunk kétlépéses mattot.")
+    # Ha nem találunk kétlépéses mattot, visszaadunk None-t
+    return None
+
+
+def can_white_mate_in_one(board):
+    """Checks if white can give mate in one move."""
+    for move in board.legal_moves:
+        board.push(move)
+        mate = board.is_checkmate()
+        board.pop()
+        if mate:
+            return True
+    return False
+
+def find_defensive_black_moves(board):
+    """Finds the first black move that does not lead to an immediate mate."""
+    for move in board.legal_moves:
+        board.push(move)
+        if not can_white_mate_in_one(board):
+            board.pop()
+            return move
+        board.pop()
+    return None
+
+def is_checkmate_in_three(board, depth, is_max_turn):
+    if depth == 0 or board.is_game_over():
+        return board.is_checkmate()
+    if is_max_turn:
+        for move in board.legal_moves:
+            board.push(move)
+            mate_found = is_checkmate_in_three(board, depth - 1, False)
+            board.pop()
+            if mate_found:
+                return True
+        return False
+    else:
+        for move in board.legal_moves:
+            board.push(move)
+            mate_found = is_checkmate_in_three(board, depth - 1, True)
+            board.pop()
+            if not mate_found:
+                return False
+        return True
+
+def find_first_moves_to_checkmate_in_three(board):
+    for move in board.legal_moves:
+        board.push(move)
+        if is_checkmate_in_three(board, 4, False):
+            defensive_move = find_defensive_black_moves(board)
+            if defensive_move:
+                board.push(defensive_move)
+                new_board = board.copy()  # Másoljuk a jelenlegi táblát, hogy ne módosítsuk az eredetit
+                board.pop()  # Undo black's move
+                board.pop()  # Undo white's move
+                return move, defensive_move, new_board
+        board.pop()
+    return None, None, None
+
+def find_two_move_mate(board):
+    """Searches for a two-move checkmate sequence."""
+    for first_white_move in board.legal_moves:
+        board.push(first_white_move)
+        all_moves_lead_to_mate = True
+        black_move_to_remember = None
+        second_white_move_to_remember = None
+        for black_move in board.legal_moves:
+            board.push(black_move)
+            mate_found = False
+            for second_white_move in board.legal_moves:
+                board.push(second_white_move)
+                if board.is_checkmate():
+                    mate_found = True
+                    second_white_move_to_remember = second_white_move
+                    board.pop()
+                    break
+                board.pop()
+            board.pop()
+            if not mate_found:
+                all_moves_lead_to_mate = False
+                break
+            if mate_found:
+                black_move_to_remember = black_move
+        board.pop()
+        if all_moves_lead_to_mate and black_move_to_remember and second_white_move_to_remember:
+            return first_white_move, black_move_to_remember, second_white_move_to_remember
+    return None
+
+def find_three_moves_mate(board):
+    """Searches for a three-move checkmate sequence."""
+    result = find_first_moves_to_checkmate_in_three(board)
+    if result:
+        move, defensive_move, new_board = result
+        mate_result = find_two_move_mate(new_board)  # Adjuk át az új táblát
+        if mate_result:
+            first_white_move, black_move, second_white_move = mate_result
+            return move, defensive_move, first_white_move, black_move, second_white_move
+    return None
+
+
+
+
+# Egy lépéses matt kezelése
+def handle_one_move_mate(board, images, expected_moves):
+    square_size = screen_width // 8
+    running = True
+    game_solved = False
+
+    # Kezdeti és célmezők tárolása
+    start_square = None
+    target_square = None
+
+    # Érvénytelen és rossz lépések számának nyomon követése
+    invalid_move_count = 0
+    wrong_move_count = 0
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = event.pos
+                col = x // square_size
+                row = (screen_height - y) // square_size
+                clicked_square = chess.square(col, row)
+
+                if start_square is None:
+                    # Kezdő mező kiválasztása
+                    start_square = clicked_square
+                else:
+                    # Célmező kiválasztása
+                    target_square = clicked_square
+
+                    # Felhasználó által javasolt lépés létrehozása
+                    proposed_move = chess.Move(start_square, target_square)
+
+                    # Ellenőrizd, hogy a javasolt lépés megfelel-e az elvárt lépésnek
+                    if proposed_move in expected_moves:
+                        # Ellenőrizd, hogy a lépés érvényes-e a táblán
+                        if board.is_legal(proposed_move):
+                            print(f"Jó lépés: {proposed_move}")
+                            # Hajtsuk végre a lépést
+                            board.push(proposed_move)
+                            display_board(board, images)
+                            pygame.display.update()
+
+                            # Ellenőrizzük, hogy a feladvány megoldódott-e
+                            if board.is_checkmate():
+                                print("Siker! A feladványt helyesen oldottad meg.")
+                                game_solved = True
+                                running = False
+                            # Reseteljük a számlálókat, mivel jó lépést tett
+                            invalid_move_count = 0
+                            wrong_move_count = 0
+                        else:
+                            print("Érvénytelen lépés.")
+                            invalid_move_count += 1
+                            if invalid_move_count == 3:
+                                print("Tanuld meg inkább a lépéseket.")
+                                running = False
+                    else:
+                        # Ellenőrizd, hogy a lépés legális-e
+                        if board.is_legal(proposed_move):
+                            print("Rossz lépés.")
+                            wrong_move_count += 1
+                            if wrong_move_count == 5:
+                                print("Próbálkozz könnyebb feladványokkal.")
+                                running = False
+                        else:
+                            print("Érvénytelen lépés.")
+                            invalid_move_count += 1
+                            if invalid_move_count == 3:
+                                print("Tanuld meg inkább a lépéseket.")
+                                running = False
+
+                    # Állítsuk vissza a kezdő és célmezőket, hogy új lépést tudjunk kezdeni
+                    start_square = None
+                    target_square = None
+
+        # Sakktábla kirajzolása és képernyő frissítése
+        screen.fill((200, 200, 200))
+        display_board(board, images)
+        pygame.display.update()
+
+    if game_solved:
+        pygame.time.wait(5000)
+
+def handle_two_move_mate(board, images, expected_moves):
+    square_size = screen_width // 8
+    running = True
+    game_solved = False
+    current_move_index = 0  # Az aktuális lépésindex követése
+
+    # Kezdeti és célmezők tárolása
+    start_square = None
+    target_square = None
+
+    # Érvénytelen és rossz lépések számának nyomon követése
+    invalid_move_count = 0
+    wrong_move_count = 0
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = event.pos
+                col = x // square_size
+                row = (screen_height - y) // square_size
+                clicked_square = chess.square(col, row)
+
+                if start_square is None:
+                    # Kezdő mező kiválasztása
+                    start_square = clicked_square
+                else:
+                    # Célmező kiválasztása
+                    target_square = clicked_square
+
+                    # Felhasználó által javasolt lépés létrehozása
+                    proposed_move = chess.Move(start_square, target_square)
+
+                    # Ellenőrizd, hogy a javasolt lépés megfelel-e az elvárt lépésnek a jelenlegi indexnél
+                    if current_move_index < len(expected_moves) and proposed_move == expected_moves[current_move_index]:
+                        # Ellenőrizd, hogy a lépés érvényes-e a táblán
+                        if board.is_legal(proposed_move):
+                            print(f"Jó lépés: {proposed_move}")
+                            # Hajtsuk végre a lépést
+                            board.push(proposed_move)
+                            display_board(board, images)
+                            pygame.display.update()
+
+                            # Növeljük az aktuális lépésindexet
+                            current_move_index += 1
+
+                            # Automatikusan hajtsuk végre a fekete válaszlépést
+                            if current_move_index < len(expected_moves):
+                                black_move = expected_moves[current_move_index]
+                                print(f"Fekete válaszlépése: {black_move}")
+                                board.push(black_move)
+                                display_board(board, images)
+                                pygame.display.update()
+                                current_move_index += 1
+
+                            # Ellenőrizzük, hogy a feladvány megoldódott-e
+                            if current_move_index == len(expected_moves):
+                                print("Siker! A feladványt helyesen oldottad meg.")
+                                game_solved = True
+                                running = False
+                            # Reseteljük a számlálókat, mivel jó lépést tett
+                            invalid_move_count = 0
+                            wrong_move_count = 0
+                        else:
+                            print("Érvénytelen lépés.")
+                            invalid_move_count += 1
+                            if invalid_move_count == 3:
+                                print("Tanuld meg inkább a lépéseket.")
+                                running = False
+                    else:
+                        # Ellenőrizd, hogy a lépés legális-e
+                        if board.is_legal(proposed_move):
+                            print("Rossz lépés.")
+                            wrong_move_count += 1
+                            if wrong_move_count == 5:
+                                print("Próbálkozz könnyebb feladványokkal.")
+                                running = False
+                        else:
+                            print("Érvénytelen lépés.")
+                            invalid_move_count += 1
+                            if invalid_move_count == 3:
+                                print("Tanuld meg inkább a lépéseket.")
+                                running = False
+
+                    # Állítsuk vissza a kezdő és célmezőket, hogy új lépést tudjunk kezdeni
+                    start_square = None
+                    target_square = None
+
+        # Sakktábla kirajzolása és képernyő frissítése
+        screen.fill((200, 200, 200))
+        display_board(board, images)
+        pygame.display.update()
+
+    if game_solved:
+        pygame.time.wait(5000)
+
+
+
+### A fő funkció
+
+# A kiválasztott nehézségi szintet tároló változó
+chosen_difficulty = None
+
+def main():
+    # Bábuk képeinek betöltése
+    images = load_images()
+    
+    # Kezdőképernyő ciklus
+    running = True
+    while running:
+        screen.fill((200, 200, 200))
+
+        # Gombok megjelenítése
+        pygame.draw.rect(screen, white, easy_button)
+        pygame.draw.rect(screen, grey, medium_button)
+        pygame.draw.rect(screen, black, hard_button)
+        
+        # Mate in 1 és Mate in 2 gombok megjelenítése
+        pygame.draw.rect(screen, black, mate_in_1_button)
+        pygame.draw.rect(screen, grey, mate_in_2_button)
+        pygame.draw.rect(screen, white, mate_in_3_button)
+        # Gombok feliratai
+        easy_text = font.render("Könnyű", True, black)
+        screen.blit(easy_text, (easy_button.x + 10, easy_button.y + 10))
+
+        medium_text = font.render("Közepes", True, black)
+        screen.blit(medium_text, (medium_button.x + 10, easy_button.y + 10))
+
+        hard_text = font.render("Nehéz", True, white)
+        screen.blit(hard_text, (hard_button.x + 10, easy_button.y + 10))
+
+        mate_in_1_text = font.render("Mate in 1", True, white)
+        screen.blit(mate_in_1_text, (mate_in_1_button.x + 10, mate_in_1_button.y + 10))
+
+        mate_in_2_text = font.render("Mate in 2", True, black)
+        screen.blit(mate_in_2_text, (mate_in_2_button.x + 10, mate_in_2_button.y + 10))
+        
+        mate_in_3_text = font.render("Mate in 3", True, black)
+        screen.blit(mate_in_3_text, (mate_in_3_button.x + 10, mate_in_3_button.y + 10))
+
+        # Események kezelése
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                # Nehézségi szintek kiválasztása
+                if easy_button.collidepoint(event.pos):
+                    print("Könnyű nehézségi szint kiválasztva")
+                    chosen_difficulty = "easy"
+                elif medium_button.collidepoint(event.pos):
+                    print("Közepes nehézségi szint kiválasztva")
+                    chosen_difficulty = "medium"
+                elif hard_button.collidepoint(event.pos):
+                    print("Nehéz nehézségi szint kiválasztva")
+                    chosen_difficulty = "hard"
+                
+                # Mate in 1 és Mate in 2 opciók kiválasztása
+                elif mate_in_1_button.collidepoint(event.pos) and chosen_difficulty is not None:
+                    print("Mate in 1 kiválasztva")
+                    fen_code = fen_codes[chosen_difficulty]
+                    board = create_board(fen_code)
+                    expected_moves = find_one_move_mate(board)
+                    if expected_moves:
+                        handle_one_move_mate(board, images, expected_moves)
+                        chosen_difficulty = None
+                elif mate_in_2_button.collidepoint(event.pos) and chosen_difficulty is not None:
+                    print("Mate in 2 kiválasztva")
+                    fen_code = fen_codes[chosen_difficulty + "_2"]
+                    board = create_board(fen_code)
+                    expected_moves = find_two_move_mate(board)
+                    if expected_moves:
+                        handle_two_move_mate(board, images, expected_moves)
+                        chosen_difficulty = None
+                elif mate_in_3_button.collidepoint(event.pos) and chosen_difficulty is not None:
+                    print("Mate in 3 kiválasztva")
+                    fen_code = fen_codes[chosen_difficulty + "_3"]
+                    board = create_board(fen_code)
+                    expected_moves = find_three_moves_mate(board)
+                    if expected_moves:
+                        handle_two_move_mate(board, images, expected_moves)
+                        chosen_difficulty = None
+        pygame.display.update()
+
+    pygame.quit()
+    # Indítsuk el a fő funkciót
+if __name__ == "__main__":
+    main()
