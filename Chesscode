@@ -1,5 +1,7 @@
+
 import pygame
 import chess
+import urllib.request
 
 # Pygame inicializálása
 pygame.init()
@@ -49,13 +51,20 @@ def load_images():
         'black_king', 'black_queen', 'black_rook',
         'black_bishop', 'black_knight', 'black_pawn'
     ]
-    base_url = "https://raw.githubusercontent.com/nagylevi011/Kolev/main/images/"  # Az alap URL, ahol a képek találhatók
+    base_url = "https://github.com/nagylevi011/Kolev/blob/main/"
     for piece in pieces:
-        light_url = f"{base_url}{piece}_light.png"
-        dark_url = f"{base_url}{piece}_dark.png"
+        light_url = f"{base_url}{piece}_light.png?raw=true"
+        dark_url = f"{base_url}{piece}_dark.png?raw=true"
+        
+        light_file_name = f"{piece}_light.png"
+        dark_file_name = f"{piece}_dark.png"
+
+        urllib.request.urlretrieve(light_url, light_file_name)
+        urllib.request.urlretrieve(dark_url, dark_file_name)
+
         images[piece] = {
-            'light': pygame.image.load(light_url),
-            'dark': pygame.image.load(dark_url)
+            'light': pygame.image.load(light_file_name),
+            'dark': pygame.image.load(dark_file_name)
         }
     return images
 
