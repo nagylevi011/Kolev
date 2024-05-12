@@ -49,14 +49,17 @@ def load_images():
         'black_king', 'black_queen', 'black_rook',
         'black_bishop', 'black_knight', 'black_pawn'
     ]
+    base_url = "https://raw.githubusercontent.com/nagylevi011/Kolev/main/images/"  # Az alap URL, ahol a képek találhatók
     for piece in pieces:
-        light_path = f'C:/Users/Nagy Róbert/Documents/teszt/{piece}_light.png'
-        dark_path = f'C:/Users/Nagy Róbert/Documents/teszt/{piece}_dark.png'
+        light_url = f"{base_url}{piece}_light.png"
+        dark_url = f"{base_url}{piece}_dark.png"
         images[piece] = {
-            'light': pygame.image.load(light_path),
-            'dark': pygame.image.load(dark_path)
+            'light': pygame.image.load(light_url),
+            'dark': pygame.image.load(dark_url)
         }
     return images
+
+
 
 # Sakktábla létrehozása adott FEN kód alapján
 def create_board(fen):
