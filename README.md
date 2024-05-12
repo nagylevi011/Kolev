@@ -8,7 +8,7 @@ Technológiai Stack
 
 •	Programozási nyelv: Python 3
 
-•	Könyvtárak: Pygame, Python Chess Library
+•	Könyvtárak: Pygame, Python Chess Library, Python urllib.request
 
 A Pygame könyvtárat használjuk a grafikus felhasználói felület megvalósítására, míg a Python Chess Library biztosítja a sakk szabályainak érvényesítését.
 
