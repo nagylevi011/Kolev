@@ -3,7 +3,7 @@ import pygame
 import chess
 import urllib.request
 
-# Pygame inicializálása
+# Az importálások után a Pygame inicializálása
 pygame.init()
 
 # Képernyő beállítása
@@ -12,7 +12,7 @@ screen_height = 640
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Sakkfeladvány")
 
-# Színek és betűtípus
+# Színek és betűtípusok megadása
 white = (255, 255, 255)
 black = (0, 0, 0)
 grey = (128, 128, 86)
@@ -184,73 +184,83 @@ def find_two_move_mate(board):
     # Ha nem találunk kétlépéses mattot, visszaadunk None-t
     return None
 
-
-def can_white_mate_in_one(board):
-    """Checks if white can give mate in one move."""
+# 3 lépéses matt megkeresése, ezt építjük most fel
+def can_white_mate_in_one(board): #Fehér tud-e mattot adni egy lépéssel
+    #Végiterálunk a fehér lehetséges lépésein
     for move in board.legal_moves:
+        #Végrehajtja a lépést a táblán
         board.push(move)
+        #Ellenőrizzük, hogy a lépés mattot eredményez
         mate = board.is_checkmate()
+        #Lépést visszavonjuk
         board.pop()
+        # Visszatérési érték a mattól függően
         if mate:
             return True
     return False
-
+# Fekete defenzív lépését keressük
 def find_defensive_black_moves(board):
-    """Finds the first black move that does not lead to an immediate mate."""
+    #Végiterálunk a fekete lehetséges lépésein
     for move in board.legal_moves:
+        #Végrehajtja a lépést a táblán
         board.push(move)
+        #Ellenőrzi, hogy a fehér játékos utána tud-e mattot adni
         if not can_white_mate_in_one(board):
             board.pop()
             return move
         board.pop()
+    #Ha fekete bármely lépése után fehér a következő lépéseben mattot ad, akkor az csak 2 lépéses matt
     return None
-
+#Segédfüggvények következnek
 def is_checkmate_in_three(board, depth, is_max_turn):
-    if depth == 0 or board.is_game_over():
+    if depth == 0 or board.is_game_over(): #Ha elértük a megengedett mélységet vagy vége van a játéknak
         return board.is_checkmate()
     if is_max_turn:
-        for move in board.legal_moves:
+        for move in board.legal_moves: #Végigiterálunk a lehetséges lépéseken
             board.push(move)
-            mate_found = is_checkmate_in_three(board, depth - 1, False)
+            mate_found = is_checkmate_in_three(board, depth - 1, False) #Rekurzív hívás
             board.pop()
-            if mate_found:
+            if mate_found:#ha találtunk mattot
                 return True
         return False
-    else:
-        for move in board.legal_moves:
+    else: #fekete következik
+        for move in board.legal_moves: #Végigiterláunk a lehetséges lépéseken
             board.push(move)
-            mate_found = is_checkmate_in_three(board, depth - 1, True)
+            mate_found = is_checkmate_in_three(board, depth - 1, True) #Rekurzív hívás
             board.pop()
             if not mate_found:
                 return False
         return True
 
 def find_first_moves_to_checkmate_in_three(board):
-    for move in board.legal_moves:
+    for move in board.legal_moves: #végigiterál a lehetséges lépéseken
         board.push(move)
         if is_checkmate_in_three(board, 4, False):
             defensive_move = find_defensive_black_moves(board)
-            if defensive_move:
+            if defensive_move: #Ha találtunk feketének védekező lépést
                 board.push(defensive_move)
-                new_board = board.copy()  # Másoljuk a jelenlegi táblát, hogy ne módosítsuk az eredetit
-                board.pop()  # Undo black's move
-                board.pop()  # Undo white's move
-                return move, defensive_move, new_board
+                new_board = board.copy() #Az aktuális tábla másolata 
+                board.pop()  #Visszavonjuk a lépéseket
+                board.pop()  
+                return move, defensive_move, new_board #Visszaadjuk fehér és fekete első lépését, valamint az így kapott új tábláz
         board.pop()
     return None, None, None
-
+# 2 lépéses mattot keresünk, szükségünk lesz erre a függvényre
 def find_two_move_mate(board):
-    """Searches for a two-move checkmate sequence."""
+    #Végigiterálunk a lehetséges fehér lépéseken
     for first_white_move in board.legal_moves:
         board.push(first_white_move)
         all_moves_lead_to_mate = True
-        black_move_to_remember = None
-        second_white_move_to_remember = None
+        black_move_to_remember = None #Fekete lépése miután mattot kap
+        second_white_move_to_remember = None #Fehér kegyelemdöfő lépése
+        #Végigiterálunk fekete lehetséges lépésein
         for black_move in board.legal_moves:
+            #Fekete lépését végrehajtjuk
             board.push(black_move)
+            #Alapértelmezett érték-nem találtunk mattot
             mate_found = False
             for second_white_move in board.legal_moves:
-                board.push(second_white_move)
+                board.push(second_white_move) #végrehajtja, majd ellenőrzi fehér második lépését, s ellenőrzi hogy matt-e
                 if board.is_checkmate():
                     mate_found = True
                     second_white_move_to_remember = second_white_move
@@ -262,20 +272,23 @@ def find_two_move_mate(board):
                 all_moves_lead_to_mate = False
                 break
             if mate_found:
-                black_move_to_remember = black_move
+                black_move_to_remember = black_move #megjegyezzük fekete lépését
         board.pop()
-        if all_moves_lead_to_mate and black_move_to_remember and second_white_move_to_remember:
+        if all_moves_lead_to_mate and black_move_to_remember and second_white_move_to_remember: #Ha lesz mattot eredményez kombináció, eltároljuk a lépéseket, visszaadjuk
             return first_white_move, black_move_to_remember, second_white_move_to_remember
     return None
-
+# 3 lépéses matt megkeresése
 def find_three_moves_mate(board):
-    """Searches for a three-move checkmate sequence."""
     result = find_first_moves_to_checkmate_in_three(board)
+    #Ha találtunk 3 lépéses mattot
     if result:
+        #Fehér és fekete első lépése, majd az így kapott új tábla
         move, defensive_move, new_board = result
-        mate_result = find_two_move_mate(new_board)  # Adjuk át az új táblát
+        mate_result = find_two_move_mate(new_board) #új tábla  
+        #Ha találtunk az új táblán 2 lépéses mattot, ezáltal 3 lépéses mattot, visszaadjuk a lépéseket
         if mate_result:
             first_white_move, black_move, second_white_move = mate_result
+            #Az eltárolt megoldás
             return move, defensive_move, first_white_move, black_move, second_white_move
     return None
 
@@ -332,7 +345,7 @@ def handle_one_move_mate(board, images, expected_moves):
                                 print("Siker! A feladványt helyesen oldottad meg.")
                                 game_solved = True
                                 running = False
-                            # Reseteljük a számlálókat, mivel jó lépést tett
+                            # Reseteljük a számlálókat, mivel jó lépést tett, így újra hibázhat
                             invalid_move_count = 0
                             wrong_move_count = 0
                         else:
@@ -342,7 +355,7 @@ def handle_one_move_mate(board, images, expected_moves):
                                 print("Tanuld meg inkább a lépéseket.")
                                 running = False
                     else:
-                        # Ellenőrizd, hogy a lépés legális-e
+                        # A lépés ellenőrzése
                         if board.is_legal(proposed_move):
                             print("Rossz lépés.")
                             wrong_move_count += 1
@@ -364,10 +377,11 @@ def handle_one_move_mate(board, images, expected_moves):
         screen.fill((200, 200, 200))
         display_board(board, images)
         pygame.display.update()
-
+    # Ha megoldottuk a feladványt, nézegetjuk a sikerünket, majd visszatérünk a kezdőképernyőre. 
     if game_solved:
         pygame.time.wait(5000)
 
+# Két lépéses matt kezelése ( a 3 lépéses matt kezelésére is ezt használjuk)
 def handle_two_move_mate(board, images, expected_moves):
     square_size = screen_width // 8
     running = True
@@ -403,9 +417,9 @@ def handle_two_move_mate(board, images, expected_moves):
                     # Felhasználó által javasolt lépés létrehozása
                     proposed_move = chess.Move(start_square, target_square)
 
-                    # Ellenőrizd, hogy a javasolt lépés megfelel-e az elvárt lépésnek a jelenlegi indexnél
+                    # Ellenőrzés hogy a javasolt lépés megfelel-e az elvárt lépésnek a jelenlegi indexnél
                     if current_move_index < len(expected_moves) and proposed_move == expected_moves[current_move_index]:
-                        # Ellenőrizd, hogy a lépés érvényes-e a táblán
+                        # Ellenőrzés hogy a lépés érvényes jó lépése-e a táblán
                         if board.is_legal(proposed_move):
                             print(f"Jó lépés: {proposed_move}")
                             # Hajtsuk végre a lépést
@@ -440,7 +454,7 @@ def handle_two_move_mate(board, images, expected_moves):
                                 print("Tanuld meg inkább a lépéseket.")
                                 running = False
                     else:
-                        # Ellenőrizd, hogy a lépés legális-e
+                        # A lépés ellenőrzése
                         if board.is_legal(proposed_move):
                             print("Rossz lépés.")
                             wrong_move_count += 1
@@ -467,8 +481,6 @@ def handle_two_move_mate(board, images, expected_moves):
         pygame.time.wait(5000)
 
 
-
-### A fő funkció
 
 # A kiválasztott nehézségi szintet tároló változó
 chosen_difficulty = None
@@ -526,7 +538,7 @@ def main():
                     print("Nehéz nehézségi szint kiválasztva")
                     chosen_difficulty = "hard"
                 
-                # Mate in 1 és Mate in 2 opciók kiválasztása
+                # Mate in 1, Mate in 2 és a Mate in 3 opciók kiválasztása
                 elif mate_in_1_button.collidepoint(event.pos) and chosen_difficulty is not None:
                     print("Mate in 1 kiválasztva")
                     fen_code = fen_codes[chosen_difficulty]
