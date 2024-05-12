@@ -10,7 +10,7 @@ Technológiai Stack
 
 •	Könyvtárak: Pygame, Python Chess Library, Python urllib.request
 
-A Pygame könyvtárat használjuk a grafikus felhasználói felület megvalósítására, míg a Python Chess Library biztosítja a sakk szabályainak érvényesítését.
+A Pygame könyvtárat használjuk a grafikus felhasználói felület megvalósítására, a Python Chess Library biztosítja a sakk szabályainak érvényesítését, míg az urllib.request modult a képek letöltéséhez használjuk az Internetről.
 
 Főbb Jellemzők
 
