@@ -1,39 +1,147 @@
-Sakkfeladvány Projekt
+# RSI-VWAP Trading Strategy
 
-Projekt Leírás
+A comprehensive trading strategy that combines RSI (Relative Strength Index) and VWAP (Volume Weighted Average Price) signals for algorithmic trading.
 
-A projektünk egy Python nyelven írt interaktív sakkjáték, amely lehetőséget biztosít a felhasználóknak, hogy különböző nehézségi szinteken próbáljanak meg mattot adni egy, kettő vagy három lépésben. A sakk, sakkfeladványok megoldásának általános célja, hogy fejlessze a játékosok stratégiai gondolkodását és sakktudását egy szórakoztató és kihívásokkal teli környezetben.
+## Overview
 
-Technológiai Stack
+This strategy uses two technical indicators to generate trading signals:
 
-•	Programozási nyelv: Python 3
+1. **RSI (20-period)**: Identifies overbought/oversold conditions
+2. **VWAP (20-period)**: Identifies price position relative to volume-weighted average
 
-•	Könyvtárak: Pygame, Python Chess Library, Python urllib.request
+## Strategy Logic
 
-A Pygame könyvtárat használjuk a grafikus felhasználói felület megvalósítására, a Python Chess Library biztosítja a sakk szabályainak érvényesítését, míg az urllib.request modult a képek letöltéséhez használjuk az Internetről.
+### Signal Generation
 
-Főbb Jellemzők
+#### VWAP Signals:
+- **1 (Below VWAP)**: Price consistently below VWAP for 10 periods
+- **2 (Above VWAP)**: Price consistently above VWAP for 10 periods  
+- **3 (Touching VWAP)**: Price oscillating around VWAP
 
-•	Nehézségi szintek választása: A játékosok kiválaszthatják a könnyű, közepes vagy nehéz nehézségi szintet attól függően, hogy milyen kihívást keresnek.
+#### RSI Signals:
+- **1 (Oversold)**: RSI ≤ 30
+- **2 (Neutral)**: 30 < RSI < 70
+- **3 (Overbought)**: RSI ≥ 70
 
-•	Feladványtípusok: A játékosok választhatnak mate-in-1, mate-in-2, vagy mate-in-3 feladványok közül, amelyek különböző komplexitást kínálnak.
+#### Combined Entry Signals:
+- **Buy (1)**: RSI oversold AND (price above VWAP OR touching VWAP)
+- **Sell (-1)**: RSI overbought AND price below VWAP
+- **Hold (0)**: All other combinations
 
-•	Interaktív bábuk: A játékosok az egér kattintásokkal mozgathatják a bábukat a sakktáblán, ami intuitív és felhasználóbarát játékélményt biztosít.
+### Risk Management
+- **Stop Loss**: 2% from entry price
+- **Take Profit**: 4% from entry price
+- **Position Sizing**: 95% of available capital
+- **Commission**: 0.1% per trade
 
-Előfeltételek
+## Files
 
-Győződj meg róla, hogy a Python egyik új verziója telepítve van a számítógépedre. Ezenkívül szükséged lesz a pygame és a chess könyvtárakra, amelyek például a következő parancsokkal telepíthetők:
+1. **`trading_strategy.py`**: Complete strategy with your actual DBN data
+2. **`strategy_example.py`**: Simplified version with sample data for testing
+3. **`requirements.txt`**: Required Python packages
 
-pip install pygame
+## Installation
 
-pip install chess
+```bash
+pip install -r requirements.txt
+```
 
-Hogyan Játszd
+## Usage
 
-•	Kezdetek: választani kell nehézségi szintet és matt típust is, ennek megfelelően klikkelj a könnyű, közepes vagy nehéz gombok egyikére, majd kattints a mate-in-1, mate-in-2 vagy mate-in-3 gombok egyikére.
+### With Your Data
+```python
+python trading_strategy.py
+```
 
-•	Oldd meg a feladványt: Mozgasd a bábukat az egérrel. A cél, hogy mattot adj a királynak a megadott lépések számával. Egy lépést úgy tudsz kezelni, hogy kijelölöd kattintással annak a bábunak a mezőjét, amit mozgatni akarsz, majd azt a mezőt is, ahova mozgatni akarod. A program véleményezi minden lépésedet, ennek megfelelően lehet a lépésed jó, rossz vagy érvénytelen is. Vigyázz, mert egymás után 5 rossz lépés vagy 3 érvénytelen lépés után oda a lehetőség. Ha jót léptél, akkor a program instant megjeleníti a program válaszlépését és folytathatod a gondolkodást a következő lépésen.
+### With Sample Data (for testing)
+```python
+python strategy_example.py
+```
 
-•	Az elején egy kis idő kell mire betöltődik a pygame, ugyanis a bábuk képeit előbb még le kell töltenie a programnak.
+## Key Features
 
-Sok sikert a feladványokhoz!
+- **Data Processing**: Handles 8-year, 1-minute timeframe data
+- **Market Hours**: Filters data to 13:30-20:00 (trading hours)
+- **Technical Indicators**: VWAP and RSI with 20-period lookback
+- **Signal Combination**: Sophisticated logic combining both indicators
+- **Backtesting**: Complete performance analysis using backtesting library
+- **Visualization**: HTML charts showing strategy performance
+
+## Expected Output
+
+The strategy will generate:
+
+1. **Performance Metrics**:
+   - Total Return vs Buy & Hold
+   - Maximum Drawdown
+   - Sharpe Ratio
+   - Win Rate
+   - Number of Trades
+
+2. **Signal Analysis**:
+   - Distribution of buy/sell/hold signals
+   - VWAP and RSI signal breakdowns
+
+3. **Visual Charts**:
+   - Interactive HTML chart showing trades and indicators
+   - Price action with entry/exit points
+
+## Strategy Parameters
+
+You can modify these parameters in the strategy class:
+
+```python
+class RSI_VWAP_Strategy(Strategy):
+    rsi_oversold = 30        # RSI oversold threshold
+    rsi_overbought = 70      # RSI overbought threshold
+    stop_loss_pct = 0.02     # Stop loss percentage
+    take_profit_pct = 0.04   # Take profit percentage
+```
+
+## Data Requirements
+
+- **Format**: DBN (Databento) file format
+- **Timeframe**: 1-minute bars
+- **Columns**: Open, High, Low, Close, Volume
+- **Period**: 8 years of historical data
+- **Market Hours**: 13:30-20:00
+
+## Performance Considerations
+
+- The strategy uses vectorized operations where possible
+- Signal calculation includes lookback periods for stability
+- Memory efficient processing of large datasets
+- Optimized for intraday trading patterns
+
+## Customization
+
+### Adding New Indicators
+```python
+# In the init() method
+self.new_indicator = self.I(ta.sma, self.data.Close, length=50)
+```
+
+### Modifying Entry Logic
+```python
+# In the next() method
+if custom_condition and not self.position:
+    self.buy(size=0.95)
+```
+
+### Risk Management Adjustments
+```python
+# Modify stop loss/take profit levels
+stop_loss_pct = 0.015  # 1.5% stop loss
+take_profit_pct = 0.06  # 6% take profit
+```
+
+## Troubleshooting
+
+1. **Missing Dependencies**: Install all packages from requirements.txt
+2. **Data Path Issues**: Update the file path in the script
+3. **Memory Issues**: Consider processing data in chunks for very large datasets
+4. **No Signals Generated**: Check indicator parameters and thresholds
+
+## Disclaimer
+
+This strategy is for educational and research purposes only. Past performance does not guarantee future results. Always test thoroughly before using with real money and consider transaction costs, slippage, and market conditions.
